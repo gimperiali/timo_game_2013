@@ -1,0 +1,2 @@
+C:/workspaces/timo_game_2013/android/app/.cxx/Debug/4a4722fm/x86/CMakeFiles/edit_cache.dir
+C:/workspaces/timo_game_2013/android/app/.cxx/Debug/4a4722fm/x86/CMakeFiles/rebuild_cache.dir
