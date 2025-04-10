@@ -1,30 +1,46 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:timo_game_2013/main.dart';
+import 'package:flame/game.dart'; // ✅ Needed for GameWidget
+import 'package:timo_game_2013/main.dart'; // ✅ Replace with your actual package name
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Stop button is visible and tappable',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GameWidget<MyGame>(
+            game: MyGame(),
+            overlayBuilderMap: {
+              'StopButton': (context, MyGame game) {
+                return Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ElevatedButton(
+                      key: const Key('stop_button'),
+                      onPressed: () => game.stopGame(),
+                      child: const Text('Stop'),
+                    ),
+                  ),
+                );
+              },
+              'RestartOverlay': (context, MyGame game) {
+                return const SizedBox.shrink();
+              },
+            },
+            initialActiveOverlays: const ['StopButton'],
+          ),
+        ),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    final stopButton = find.byKey(const Key('stop_button'));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(stopButton, findsOneWidget); // ✅ Should find it
+    await tester.tap(stopButton); // ✅ Tap it
+    await tester.pump(); // ✅ Let the widget react
   });
 }

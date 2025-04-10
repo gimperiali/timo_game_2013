@@ -10,7 +10,7 @@ void main() {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        body: GameWidget(
+        body: GameWidget<MyGame>(
           game: MyGame(),
           overlayBuilderMap: {
             'RestartOverlay': (context, MyGame game) {
@@ -19,7 +19,71 @@ void main() {
               });
               return const SizedBox.shrink();
             },
+            'PauseButton': (context, MyGame game) {
+              return Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: StatefulBuilder(
+                    builder: (context, setState) {
+                      return ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                        ),
+                        onPressed: () {
+                          if (game.isPaused) {
+                            game.resumeGame();
+                          } else {
+                            game.pauseGame();
+                          }
+                          setState(() {});
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              game.isPaused ? Icons.play_arrow : Icons.pause,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              game.isPaused ? "Resume" : "Pause",
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+            'StopButton': (context, MyGame game) {
+              return Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    onPressed: () {
+                      game.stopGame();
+                    },
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.stop, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text("Stop", style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           },
+          initialActiveOverlays: const ['PauseButton', 'StopButton'],
         ),
       ),
     ),
@@ -32,6 +96,7 @@ class MyGame extends FlameGame with TapDetector {
   late SpriteComponent background2;
   List<Enemy> enemies = [];
   bool isGameOver = false;
+  bool isPaused = false;
   double elapsedTime = 0;
   double enemySpawnTime = 0;
   int score = 0;
@@ -39,25 +104,33 @@ class MyGame extends FlameGame with TapDetector {
 
   @override
   Future<void> onLoad() async {
-    // Load the background image
     background1 = SpriteComponent()
       ..sprite = await loadSprite('background.png')
-      ..size = size // Set the size to cover the whole screen
-      ..position = Vector2(0, 0); // Place the first background at (0, 0)
+      ..size = size
+      ..position = Vector2(0, 0);
 
     background2 = SpriteComponent()
       ..sprite = await loadSprite('background.png')
-      ..size = size // Set the size to cover the whole screen
-      ..position = Vector2(size.x, 0); // Place the second background right after the first
+      ..size = size
+      ..position = Vector2(size.x, 0);
 
-    // Add the backgrounds to the game
     add(background1);
     add(background2);
 
-    // Play background music after user interaction
     FlameAudio.bgm.initialize();
-
     startGame();
+  }
+
+  void pauseGame() {
+    isPaused = true;
+    pauseEngine();
+    FlameAudio.bgm.pause();
+  }
+
+  void resumeGame() {
+    isPaused = false;
+    resumeEngine();
+    FlameAudio.bgm.resume();
   }
 
   void startGame() {
@@ -67,15 +140,27 @@ class MyGame extends FlameGame with TapDetector {
     score = 0;
     scoreTimer = 0;
     enemies.clear();
-    children.clear();
+    children.whereType<Component>().toList().forEach(remove);
+
     add(background1);
     add(background2);
 
     player = Player();
     add(player);
     _spawnEnemy();
+
     overlays.remove('RestartOverlay');
+    overlays.add('PauseButton');
+    overlays.add('StopButton');
+
     resumeEngine();
+  }
+
+  void stopGame() {
+    isGameOver = true;
+    pauseEngine();
+    FlameAudio.bgm.pause();
+    overlays.add('RestartOverlay');
   }
 
   @override
@@ -102,16 +187,13 @@ class MyGame extends FlameGame with TapDetector {
         }
       }
 
-      // Move the backgrounds to create a scrolling effect
-      background1.position.x -= 100 * dt; // Move the first background
-      background2.position.x -= 100 * dt; // Move the second background
+      background1.position.x -= 100 * dt;
+      background2.position.x -= 100 * dt;
 
-      // Reset background1 when it moves off the screen
       if (background1.position.x <= -size.x) {
         background1.position.x = size.x;
       }
 
-      // Reset background2 when it moves off the screen
       if (background2.position.x <= -size.x) {
         background2.position.x = size.x;
       }
@@ -121,15 +203,14 @@ class MyGame extends FlameGame with TapDetector {
   void endGame() {
     isGameOver = true;
     pauseEngine();
+    FlameAudio.bgm.pause();
     overlays.add('RestartOverlay');
   }
 
   @override
   void onTap() {
-    if (!isGameOver) {
+    if (!isGameOver && !isPaused) {
       player.jump();
-
-      // Play background music only after the first tap
       if (!FlameAudio.bgm.isPlaying) {
         FlameAudio.bgm.play('background_music.mp3', volume: 0.5);
       }
@@ -174,7 +255,7 @@ class Player extends SpriteComponent with HasGameRef<MyGame> {
 
   @override
   Future<void> onLoad() async {
-    sprite = await gameRef.loadSprite('player.png');
+    sprite = await gameRef.loadSprite('player_1.png');
   }
 
   void jump() {
