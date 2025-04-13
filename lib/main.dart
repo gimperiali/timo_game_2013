@@ -314,7 +314,7 @@ void showGameOverDialog(BuildContext context, MyGame game) {
     builder: (BuildContext context) {
       return AlertDialog(
         title: const Text("GAME OVER", textAlign: TextAlign.center),
-        content: const Text("You lost!"),
+        content: Text("You lost!\nScore: ${game.score}"),
         actions: [
           TextButton(
             onPressed: () {
