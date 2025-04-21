@@ -3,7 +3,8 @@ import 'package:flame/components.dart';
 import 'package:flame/input.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart'; // Import the SharedPreferences package
+import 'dart:math'; // Add this import to use Random
 
 void main() {
   runApp(
@@ -101,9 +102,13 @@ class MyGame extends FlameGame with TapDetector {
   double enemySpawnTime = 0;
   int score = 0;
   double scoreTimer = 0;
+  bool isJumping = false;
+  bool jumpPressed = false;
+  int highScore = 0; // This will store the high score
 
   @override
   Future<void> onLoad() async {
+    await loadHighScore(); // Load the high score when the game starts
     background1 = SpriteComponent()
       ..sprite = await loadSprite('background.png')
       ..size = size
@@ -134,6 +139,7 @@ class MyGame extends FlameGame with TapDetector {
   }
 
   void startGame() {
+    loadHighScore();
     isGameOver = false;
     elapsedTime = 0;
     enemySpawnTime = 0;
@@ -160,6 +166,7 @@ class MyGame extends FlameGame with TapDetector {
     isGameOver = true;
     pauseEngine();
     FlameAudio.bgm.pause();
+    saveHighScore(); // Save high score when game ends
     overlays.add('RestartOverlay');
   }
 
@@ -204,6 +211,7 @@ class MyGame extends FlameGame with TapDetector {
     isGameOver = true;
     pauseEngine();
     FlameAudio.bgm.pause();
+    saveHighScore(); // Save high score when game ends
     overlays.add('RestartOverlay');
   }
 
@@ -222,6 +230,7 @@ class MyGame extends FlameGame with TapDetector {
     super.render(canvas);
     _drawText(canvas, 'Time: ${elapsedTime.toStringAsFixed(2)}s', 10, 10);
     _drawText(canvas, 'Score: $score', size.x - 120, 10);
+    _drawText(canvas, 'High Score: $highScore', 10, 40); // Display high score
   }
 
   void _drawText(Canvas canvas, String text, double x, double y) {
@@ -243,6 +252,24 @@ class MyGame extends FlameGame with TapDetector {
     final enemy = Enemy(randomY);
     add(enemy);
     enemies.add(enemy);
+  }
+
+  // Save the high score using SharedPreferences
+  Future<void> saveHighScore() async {
+    print("Current Score: $score, High Score: $highScore"); // Debug output
+    if (score > highScore) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('highScore', score); // Store the high score
+      print("Saved High Score: $score"); // Debug output
+    }
+  }
+
+  // Load the high score from SharedPreferences
+  Future<void> loadHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    highScore =
+        prefs.getInt('highScore') ?? 0; // Retrieve high score or default to 0
+    print("Retrieved High Score: $highScore"); // Debug output
   }
 }
 
